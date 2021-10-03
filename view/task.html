@@ -4,9 +4,33 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <title>Rn Baram Remote Server Task</title>
+    <style>
+    html, body {
+        width: 0;
+        height: 0;
+        margin: 0;
+    }
+    </style>
+    <script>
+        window.onload = function() {
+            var img = document.querySelector('#rn-img').addEventListener('click', function(e) {
+                axios.post('/baram', {
+                    x: e.offsetX,
+                    y: e.offsetY,
+                })
+                .then(function(res) {
+                    window.location.reload()
+                })
+                .catch(function(err) {
+                    window.location.reload()
+                })
+            })
+        }
+    </script>
 </head>
 <body>
-    task page
+    <img src="/baram" alt="cap" id="rn-img"/>
 </body>
 </html>

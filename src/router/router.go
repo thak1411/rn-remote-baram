@@ -3,8 +3,14 @@ package router
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"image"
+	"image/png"
 	"net/http"
+	"time"
 
+	"github.com/go-vgo/robotgo"
+	"github.com/kbinani/screenshot"
 	"rn.com/src/config"
 )
 
@@ -45,20 +51,58 @@ func (h AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type TaskHandler struct{}
 
 func (h TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		token, err := r.Cookie("RN_TOKEN")
-		if err != nil {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
-		}
-		if token.Value == config.TOKEN {
+	token, err := r.Cookie("RN_TOKEN")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if token.Value == config.TOKEN {
+		switch r.Method {
+		case "GET":
 			http.ServeFile(w, r, "./view/task.html")
-			return
-		} else {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
 		}
+		return
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+}
+
+type BaramHandler struct{}
+type RnPoint struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
+func (h BaramHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("RN_TOKEN")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if token.Value == config.TOKEN {
+		switch r.Method {
+		case "GET":
+			bounds := image.Rectangle{Min: image.Point{0, 28}, Max: image.Point{788, 640}}
+			img, _ := screenshot.CaptureRect(bounds)
+			// if err != nil {
+			// 	panic(err)
+			// }
+			w.Header().Set("Content-Type", "image/png")
+			png.Encode(w, img)
+		case "POST":
+			p := new(RnPoint)
+			json.NewDecoder(r.Body).Decode(p)
+			// fmt.Println(p.X, p.Y+28)
+			robotgo.MoveMouse(p.X, p.Y+28)
+			time.Sleep(50 * time.Millisecond)
+			robotgo.MouseClick("left", true)
+			time.Sleep(100 * time.Millisecond)
+		}
+		return
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 }
 
@@ -67,5 +111,6 @@ func Get() *http.ServeMux {
 	mux.Handle("/", &IndexHandler{})
 	mux.Handle("/check-admin", &AdminHandler{})
 	mux.Handle("/task", &TaskHandler{})
+	mux.Handle("/baram", &BaramHandler{})
 	return mux
 }
