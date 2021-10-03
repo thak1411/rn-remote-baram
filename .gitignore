@@ -3,3 +3,9 @@ config_secret.go
 
 # excutable file
 run
+
+# image file
+*.png
+
+# ETC
+.DS_Store
