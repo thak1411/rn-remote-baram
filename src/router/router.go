@@ -68,11 +68,34 @@ func (h TaskHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type DragHandler struct{}
+
+func (h DragHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("RN_TOKEN")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if token.Value == config.TOKEN {
+		switch r.Method {
+		case "GET":
+			http.ServeFile(w, r, "./view/drag.html")
+		}
+		return
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+}
+
 type BaramHandler struct{}
 type RnPoint struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	IsDrag int `json:"isDrag"`
 }
+
+var prevPoint RnPoint = RnPoint{-1, -1, 1}
 
 func (h BaramHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	token, err := r.Cookie("RN_TOKEN")
@@ -93,11 +116,21 @@ func (h BaramHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "POST":
 			p := new(RnPoint)
 			json.NewDecoder(r.Body).Decode(p)
-			// fmt.Println(p.X, p.Y+28)
-			robotgo.MoveMouse(p.X, p.Y+28)
-			time.Sleep(50 * time.Millisecond)
-			robotgo.MouseClick("left", true)
-			time.Sleep(100 * time.Millisecond)
+			if p.IsDrag == 0 {
+				robotgo.Move(p.X, p.Y+28)
+				time.Sleep(50 * time.Millisecond)
+				robotgo.Click()
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				if prevPoint.X == -1 {
+					robotgo.Move(p.X, p.Y+28)
+					time.Sleep(100 * time.Millisecond)
+					prevPoint = *p
+					// robotgo.Move
+				} else {
+					prevPoint = RnPoint{-1, -1, 1}
+				}
+			}
 		}
 		return
 	} else {
@@ -111,6 +144,7 @@ func Get() *http.ServeMux {
 	mux.Handle("/", &IndexHandler{})
 	mux.Handle("/check-admin", &AdminHandler{})
 	mux.Handle("/task", &TaskHandler{})
+	mux.Handle("/drag", &TaskHandler{})
 	mux.Handle("/baram", &BaramHandler{})
 	return mux
 }
